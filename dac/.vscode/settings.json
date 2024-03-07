@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "nvic.h": "c"
+        "nvic.h": "c",
+        "signal.h": "c",
+        "dac.h": "c"
     }
 }
