@@ -42,8 +42,8 @@ int main(void)
 {
     clock_setup();
     dac_setup();
-    // gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_2_MHZ,
-    //               GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
+    gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_2_MHZ,
+                  GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
 
     const uint8_t lut[256] = {
         0x7F, 0x82, 0x85, 0x88, 0x8B, 0x8F, 0x92, 0x95, 0x98, 0x9B,
@@ -84,7 +84,7 @@ int main(void)
         }
     }
 
-    // gpio_toggle(GPIOD, GPIO2);        /* LED on/off */
+    gpio_toggle(GPIOD, GPIO2);        /* LED on/off */
 
     return 0;
 }
