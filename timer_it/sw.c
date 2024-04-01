@@ -13,10 +13,15 @@ static void gpio_setup(void)
 
 static void dac_setup(void)
 {
-    rcc_periph_clock_enable(RCC_GPIOA);
-    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO5);
+    // rcc_periph_clock_enable(RCC_GPIOA);
+    // gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO5);
     rcc_periph_clock_enable(RCC_DAC);
+    // dac_enable(CHANNEL_2);
+    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO5);
+    dac_disable(CHANNEL_2);
+    dac_disable_waveform_generation(CHANNEL_2);
     dac_enable(CHANNEL_2);
+    dac_set_trigger_source(DAC_CR_TSEL2_SW);
 }
 
 static void nvic_setup(void)
@@ -27,7 +32,7 @@ static void nvic_setup(void)
 }
 
 uint16_t p_acc = 0;     // аккумулятор фазы
-uint16_t p_step = 2048; // код частоты 256 - 2.5khz
+uint16_t p_step = 2560; // код частоты 128 - 1khz
 // uint8_t addr = 0; // адрес ячейки
 
 const uint16_t sinus[256] = {2048, 2092, 2136, 2180, 2224, 2268, 2312, 2355, 2399, 2442, 
@@ -55,6 +60,7 @@ void tim2_isr(void)
     // addr = p_acc >> 8; // выделение старшей части аккумулятора фазы
     TIM_SR(TIM2) &= ~TIM_SR_UIF; /* Clear interrrupt flag. */
     dac_load_data_buffer_single(sinus[p_acc >> 8], RIGHT12, CHANNEL_2);
+    dac_software_trigger(CHANNEL_2);
     p_acc += p_step;             // шаг
     
 }
