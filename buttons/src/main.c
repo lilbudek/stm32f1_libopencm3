@@ -5,15 +5,13 @@
 static void gpio_setup(void)
 {
     rcc_clock_setup_in_hsi_out_48mhz();
-
-    rcc_periph_clock_enable(RCC_GPIOB);
-
-    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO1);
-
     rcc_periph_clock_enable(RCC_GPIOD);
+    rcc_periph_clock_enable(RCC_GPIOB);
+    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO5 | GPIO6 | GPIO7 | GPIO8);
     gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
 }
 
+static volatile uint64_t _millis = 0;
 
 static void systick_setup()
 {
@@ -30,45 +28,43 @@ static void systick_setup()
     systick_counter_enable();
 }
 
+// Get the current value of the millis counter
+uint64_t millis()
+{
+    return _millis;
+}
 
 // This is our interrupt handler for the systick reload interrupt.
 // The full list of interrupt services routines that can be implemented is
 // listed in libopencm3/include/libopencm3/stm32/f0/nvic.h
-bool cur_val = false;
 void sys_tick_handler(void)
 {
     // Increment our monotonic clock
-    cur_val = gpio_get(GPIOB, GPIO1);
+    _millis++;
 }
 
+// Delay a given number of milliseconds in a blocking manner
+void delay(uint64_t duration)
+{
+    const uint64_t until = millis() + duration;
+    while (millis() < until)
+        ;
+}
 
 int main(void)
 {
-    // активный уровень 0
-    rcc_clock_setup_in_hse_8mhz_out_72mhz();
     gpio_setup();
     systick_setup();
-
-    bool prev_val = false;
-    bool led = false;
-    bool state = false;
-
+    bool val = 0;
     while (1)
     {
-        state = cur_val && (!prev_val); // 1 -> 0 = 1 в остальных случаях нули
-        if (state)
-        {
-            led = !led;
-            if (led)
-            {
-                gpio_set(GPIOD, GPIO2); // тушим 1
-            }
-            else
-            {
-                gpio_clear(GPIOD, GPIO2); // зажигаем 0
-            }
-        }
-        prev_val = cur_val;
+        val = gpio_get(GPIOB, GPIO5);
+        delay(100);
+        if (val)
+            gpio_set(GPIOD, GPIO2);
+        else
+            gpio_clear(GPIOD, GPIO2);
+        
     }
 
     return 0;
