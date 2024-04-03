@@ -26,17 +26,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
+#include <wchar.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/i2c.h>
-
 #include <ssd1306_i2c.h>
 
 void clock_setup(void)
 {
-  rcc_clock_setup_in_hse_12mhz_out_72mhz();
+  rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
   /* Enable GPIOs clock. */
   rcc_periph_clock_enable(RCC_GPIOA);
@@ -46,9 +47,9 @@ void clock_setup(void)
   rcc_periph_clock_enable(RCC_I2C2);
 
   /* set clock for AFIO*/
-  rcc_periph_clock_enable(RCC_AFIO);
+  //rcc_periph_clock_enable(RCC_AFIO);
 
-  AFIO_MAPR |= AFIO_MAPR_SWJ_CFG_FULL_SWJ_NO_JNTRST;
+  //AFIO_MAPR |= AFIO_MAPR_SWJ_CFG_FULL_SWJ_NO_JNTRST;
 }
 
 static void i2c_setup(void)
@@ -96,29 +97,29 @@ static void i2c_setup(void)
   i2c_peripheral_enable(I2C2);
 }
 
-volatile int8_t step = 0;
+// volatile int8_t step = 0;
 
-void exti9_5_isr(void)
-{
-  if (!gpio_get(GPIOA, GPIO8) && gpio_get(GPIOA, GPIO9))
-    step += 1;
-  else
-    step -= 1;
-  exti_reset_request(EXTI8); // we should clear flag manually
-}
+// void exti9_5_isr(void)
+// {
+//   if (!gpio_get(GPIOA, GPIO8) && gpio_get(GPIOA, GPIO9))
+//     step += 1;
+//   else
+//     step -= 1;
+//   exti_reset_request(EXTI8); // we should clear flag manually
+// }
 
-void board_setup(void)
-{
-  // Debug setting for rotary encoder EC11 on (PA8, PA9) for make simple command
-  gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-                GPIO_CNF_INPUT_FLOAT,
-                GPIO8 | GPIO9);
+// void board_setup(void)
+// {
+//   // Debug setting for rotary encoder EC11 on (PA8, PA9) for make simple command
+//   gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+//                 GPIO_CNF_INPUT_FLOAT,
+//                 GPIO8 | GPIO9);
 
-  nvic_enable_irq(NVIC_EXTI9_5_IRQ);
-  exti_enable_request(EXTI8);
-  exti_set_trigger(EXTI8, EXTI_TRIGGER_FALLING);
-  exti_select_source(EXTI8, GPIOA);
-}
+//   nvic_enable_irq(NVIC_EXTI9_5_IRQ);
+//   exti_enable_request(EXTI8);
+//   exti_set_trigger(EXTI8, EXTI_TRIGGER_FALLING);
+//   exti_select_source(EXTI8, GPIOA);
+// }
 
 int main(void)
 {
@@ -133,14 +134,18 @@ int main(void)
 
   clock_setup();
   i2c_setup();
-  board_setup();
-
+  //board_setup();
   ssd1306_init(I2C2, DEFAULT_7bit_OLED_SLAVE_ADDRESS, 128, 64);
+  int number = 12345;
+  wchar_t wstr[50]; // Буфер для wchar_t строки
+  // Использование swprintf для преобразования int в wchar_t*
+  swprintf(wstr, sizeof(wstr) / sizeof(wchar_t), L"%d", number);
 
   while (1)
   {
     ssd1306_clear();
-    ssd1306_drawWCharStr(32, 16, white, nowrap, L"Привет --- Hello");
+    ssd1306_drawWCharStr(0, 16, white, nowrap, L"Частота");
+    //ssd1306_drawWCharStr(48, 16, white, nowrap, wstr);
     ssd1306_refresh();
     for (uint32_t loop = 0; loop < 1000000; ++loop)
     {
