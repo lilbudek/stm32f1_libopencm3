@@ -19,12 +19,13 @@ void plus_freq(void);
 void minus_signal(void);
 void plus_signal(void);
 
-#define STEP 192
 
 uint16_t p_acc = 0;     // аккумулятор фазы
-uint16_t p_step = STEP; // код частоты 192 - 1khz
+int p_step = 0; // код частоты 192 - 1khz
+uint16_t step = 0;
 uint16_t signal[256] = {0};
-int num_sig = 0; // номер сигнала
+int8_t num_sig = 0; // номер сигнала
+int8_t num_step = 0; // номер шага
 
 uint16_t sinus[256] = {2048, 2092, 2136, 2180, 2224, 2268, 2312, 2355, 2399, 2442,
                        2485, 2527, 2570, 2612, 2654, 2695, 2736, 2777, 2817, 2857, 2896, 2934, 2973, 3010, 3047,
@@ -120,6 +121,7 @@ void tim3_isr(void) // обработка кнопок
     plus_freq();
     minus_signal();
     plus_signal();
+    step_select();
     TIM_SR(TIM3) &= ~TIM_SR_UIF; /* Clear interrrupt flag. */
 }
 
@@ -137,9 +139,8 @@ int main(void)
     wchar_t freq[8]; // Буфер для wchar_t строки
     while (1)
     {
-        f = p_step / STEP;
-        // Использование swprintf для преобразования int в wchar_t*
-        swprintf(freq, sizeof(freq) / sizeof(wchar_t), L"%d", f);
+        f = (p_step / 48)*250;
+        swprintf(freq, sizeof(freq) / sizeof(wchar_t), L"%d", f); // Использование swprintf для преобразования int в wchar_t*
 
         ssd1306_clear();
         ssd1306_drawWCharStr(0, 0, white, nowrap, L"Форма сигнала:");
@@ -163,11 +164,22 @@ int main(void)
         {
             ssd1306_drawWCharStr(0, 8, white, nowrap, L"Пила Правая");
         }
-        ssd1306_drawWCharStr(0, 16, white, nowrap, L"Частота");
-        ssd1306_drawWCharStr(48, 16, white, nowrap, freq);
-        ssd1306_drawWCharStr(64, 16, white, nowrap, L"кГц");
-        ssd1306_drawWCharStr(0, 32, white, nowrap, L"Шаг");
-        ssd1306_drawWCharStr(24, 32, white, nowrap, L"1 кГц (фикс)");
+        ssd1306_drawWCharStr(0, 16, white, nowrap, L"Частота(Гц)");
+        ssd1306_drawWCharStr(64, 16, white, nowrap, freq);
+        //ssd1306_drawWCharStr(64, 16, white, nowrap, L"Гц");
+        ssd1306_drawWCharStr(0, 32, white, nowrap, L"Шаг(Гц)");
+        if (num_step == 1)
+        {
+            ssd1306_drawWCharStr(64, 32, white, nowrap, L"250");
+        }
+        if (num_step == 2)
+        {
+            ssd1306_drawWCharStr(64, 32, white, nowrap, L"500");
+        }
+        if (num_step == 3)
+        {
+            ssd1306_drawWCharStr(64, 32, white, nowrap, L"1000");
+        }
         ssd1306_refresh();
     }
 
@@ -178,7 +190,7 @@ static void gpio_setup(void)
 {
     rcc_periph_clock_enable(RCC_GPIOD);
     rcc_periph_clock_enable(RCC_GPIOB);
-    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO5 | GPIO6 | GPIO7 | GPIO8);
+    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO9 | GPIO5 | GPIO6 | GPIO7 | GPIO8);
     gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
 }
 
@@ -279,11 +291,11 @@ void minus_freq(void)
     cur_val = gpio_get(GPIOB, GPIO5);
     if (cur_val == 1 && prev_val == 0)
     {
-        p_step -= STEP;
+        p_step -= step;
     }
-    if (p_step == 0)
+    if (p_step < 0)
     {
-        p_step = STEP;
+        p_step = 0;
     }
     prev_val = cur_val;
 }
@@ -295,7 +307,7 @@ void plus_freq(void)
     cur_val = gpio_get(GPIOB, GPIO6);
     if (cur_val == 1 && prev_val == 0)
     {
-        p_step += STEP;
+        p_step += step;
     }
     prev_val = cur_val;
 }
@@ -404,4 +416,34 @@ void plus_signal(void)
         dac_enable(CHANNEL_2);
     }
     prev_val = cur_val;
+}
+
+
+void step_select(void)
+{
+    bool cur_val = 0;
+    bool prev_val = 0;
+    cur_val = gpio_get(GPIOB, GPIO9);
+    if (cur_val == 1 && prev_val == 0)
+    {
+        num_step += 1;
+        if (num_step == 1)
+        {
+            step = 48; // 250 Гц
+        }
+        if (num_step == 2)
+        {
+            step = 96; // 500 Гц
+        }
+        if (num_step == 3)
+        {
+            step = 192; // 1000 Гц
+        }  
+        if (num_step == 4)
+        {
+            step = 48; // 250 Гц
+            num_step = 1; 
+        }  
+    }
+
 }

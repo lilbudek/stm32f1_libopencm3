@@ -2,6 +2,7 @@
     "files.associations": {
         "rcc.h": "c",
         "gpio.h": "c",
-        "i2c.h": "c"
+        "i2c.h": "c",
+        "nvic.h": "c"
     }
 }
