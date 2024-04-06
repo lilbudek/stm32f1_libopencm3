@@ -19,8 +19,10 @@ void plus_freq(void);
 void minus_signal(void);
 void plus_signal(void);
 
-uint16_t p_acc = 0;   // аккумулятор фазы
-uint16_t p_step = 96; // код частоты 96 - 1khz
+#define STEP 192
+
+uint16_t p_acc = 0;     // аккумулятор фазы
+uint16_t p_step = STEP; // код частоты 192 - 1khz
 uint16_t signal[256] = {0};
 int num_sig = 0; // номер сигнала
 
@@ -131,12 +133,13 @@ int main(void)
     i2c_setup();
     ssd1306_init(I2C2, DEFAULT_7bit_OLED_SLAVE_ADDRESS, 128, 64);
 
+    int f = 0;
+    wchar_t freq[8]; // Буфер для wchar_t строки
     while (1)
     {
-        int number = 0;
-        wchar_t wstr[8]; // Буфер для wchar_t строки
+        f = p_step / STEP;
         // Использование swprintf для преобразования int в wchar_t*
-        swprintf(wstr, sizeof(wstr) / sizeof(wchar_t), L"%d", number);
+        swprintf(freq, sizeof(freq) / sizeof(wchar_t), L"%d", f);
 
         ssd1306_clear();
         ssd1306_drawWCharStr(0, 0, white, nowrap, L"Форма сигнала:");
@@ -161,9 +164,10 @@ int main(void)
             ssd1306_drawWCharStr(0, 8, white, nowrap, L"Пила Правая");
         }
         ssd1306_drawWCharStr(0, 16, white, nowrap, L"Частота");
-        ssd1306_drawWCharStr(48, 16, white, nowrap, wstr);
-        ssd1306_drawWCharStr(0, 24, white, nowrap, L"Шаг");
-        ssd1306_drawWCharStr(48, 24, white, nowrap, wstr);
+        ssd1306_drawWCharStr(48, 16, white, nowrap, freq);
+        ssd1306_drawWCharStr(64, 16, white, nowrap, L"кГц");
+        ssd1306_drawWCharStr(0, 32, white, nowrap, L"Шаг");
+        ssd1306_drawWCharStr(24, 32, white, nowrap, L"1 кГц (фикс)");
         ssd1306_refresh();
     }
 
@@ -238,7 +242,7 @@ static void timers_setup(void)
     rcc_periph_clock_enable(RCC_TIM3);
 
     /* Set timer start value. */
-    //TIM_CNT(TIM2) = 1;
+    // TIM_CNT(TIM2) = 1;
     TIM_CNT(TIM3) = 1;
 
     /* Set timer prescaler. 36MHz/36000 => 1000 counts per second. */
@@ -275,11 +279,11 @@ void minus_freq(void)
     cur_val = gpio_get(GPIOB, GPIO5);
     if (cur_val == 1 && prev_val == 0)
     {
-        p_step -= 96;
+        p_step -= STEP;
     }
     if (p_step == 0)
     {
-        p_step = 96;
+        p_step = STEP;
     }
     prev_val = cur_val;
 }
@@ -291,7 +295,7 @@ void plus_freq(void)
     cur_val = gpio_get(GPIOB, GPIO6);
     if (cur_val == 1 && prev_val == 0)
     {
-        p_step += 96;
+        p_step += STEP;
     }
     prev_val = cur_val;
 }
@@ -401,4 +405,3 @@ void plus_signal(void)
     }
     prev_val = cur_val;
 }
-
