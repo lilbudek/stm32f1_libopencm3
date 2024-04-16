@@ -9,24 +9,26 @@
 #include <libopencm3/stm32/i2c.h>
 #include <ssd1306_i2c.h>
 
-static void gpio_setup(void);
-static void dac_setup(void);
-static void i2c_setup(void);
-static void timers_setup(void);
-static void nvic_setup(void);
-void minus_freq(void);
-void plus_freq(void);
-void minus_signal(void);
-void plus_signal(void);
+static void gpio_setup(void); // установить входы/выходы
+static void dac_setup(void); // настройка цап
+static void i2c_setup(void); // настройка и2ц
+static void timers_setup(void); // настройка таймеров
+static void nvic_setup(void); // настройка прерываний
+void minus_freq(void); //
+void plus_freq(void); //
+void minus_signal(void); // функции для кнопок
+void plus_signal(void); //
+void step_select(void); //
 
 
 uint16_t p_acc = 0;     // аккумулятор фазы
 int p_step = 0; // код частоты 192 - 1khz
-uint16_t step = 0;
-uint16_t signal[256] = {0};
+uint16_t step = 0; // размер шага
+uint16_t signal[256] = {0}; // буфер для цапа
 int8_t num_sig = 0; // номер сигнала
 int8_t num_step = 0; // номер шага
 
+/*  отсчеты сигналов    */
 uint16_t sinus[256] = {2048, 2092, 2136, 2180, 2224, 2268, 2312, 2355, 2399, 2442,
                        2485, 2527, 2570, 2612, 2654, 2695, 2736, 2777, 2817, 2857, 2896, 2934, 2973, 3010, 3047,
                        3084, 3119, 3155, 3189, 3223, 3256, 3288, 3320, 3351, 3381, 3410, 3439, 3466, 3493, 3519,
@@ -44,7 +46,7 @@ uint16_t sinus[256] = {2048, 2092, 2136, 2180, 2224, 2268, 2312, 2355, 2399, 244
                        527, 551, 576, 602, 629, 656, 685, 714, 744, 775, 807, 839, 872, 906, 940, 976, 1011, 1048,
                        1085, 1122, 1161, 1199, 1238, 1278, 1318, 1359, 1400, 1441, 1483, 1525, 1568, 1610, 1653,
                        1696, 1740, 1783, 1827, 1871, 1915, 1959, 2003};
-
+/*                      */
 uint16_t square[256] = {3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847,
                         3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847,
                         3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847,
@@ -62,7 +64,7 @@ uint16_t square[256] = {3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 3847, 38
                         248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248,
                         248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248,
                         248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248};
-
+/*                      */
 uint16_t triangle[256] = {248, 276, 304, 332, 360, 389, 417, 445, 473, 501, 529, 557, 585, 614, 642, 670, 698,
                           726, 754, 782, 810, 838, 867, 895, 923, 951, 979, 1007, 1035, 1063, 1092, 1120, 1148, 1176, 1204, 1232, 1260,
                           1288, 1316, 1345, 1373, 1401, 1429, 1457, 1485, 1513, 1541, 1570, 1598, 1626, 1654, 1682, 1710, 1738, 1766, 1794,
@@ -77,7 +79,7 @@ uint16_t triangle[256] = {248, 276, 304, 332, 360, 389, 417, 445, 473, 501, 529,
                           1598, 1570, 1541, 1513, 1485, 1457, 1429, 1401, 1373, 1345, 1316, 1288, 1260, 1232, 1204, 1176, 1148, 1120, 1092,
                           1063, 1035, 1007, 979, 951, 923, 895, 867, 838, 810, 782, 754, 726, 698, 670, 642, 614, 585, 557, 529, 501, 473,
                           445, 417, 389, 360, 332, 304, 276};
-
+/*                      */
 uint16_t l_saw[256] = {248, 262, 276, 290, 304, 319, 333, 347, 361, 375, 389, 403, 417, 431, 446, 460, 474,
                        488, 502, 516, 530, 544, 559, 573, 587, 601, 615, 629, 643, 657, 671, 686, 700, 714, 728, 742, 756, 770, 784,
                        798, 813, 827, 841, 855, 869, 883, 897, 911, 925, 940, 954, 968, 982, 996, 1010, 1024, 1038, 1052, 1067, 1081,
@@ -92,7 +94,7 @@ uint16_t l_saw[256] = {248, 262, 276, 290, 304, 319, 333, 347, 361, 375, 389, 40
                        3240, 3254, 3268, 3282, 3297, 3311, 3325, 3339, 3353, 3367, 3381, 3395, 3409, 3424, 3438, 3452, 3466, 3480, 3494,
                        3508, 3522, 3536, 3551, 3565, 3579, 3593, 3607, 3621, 3635, 3649, 3664, 3678, 3692, 3706, 3720, 3734, 3748, 3762,
                        3776, 3791, 3805, 3819, 3833, 3847};
-
+/*                      */
 uint16_t r_saw[256] = {3847, 3833, 3819, 3805, 3791, 3776, 3762, 3748, 3734, 3720, 3706, 3692, 3678, 3664,
                        3649, 3635, 3621, 3607, 3593, 3579, 3565, 3551, 3536, 3522, 3508, 3494, 3480, 3466, 3452, 3438, 3424, 3409,
                        3395, 3381, 3367, 3353, 3339, 3325, 3311, 3297, 3282, 3268, 3254, 3240, 3226, 3212, 3198, 3184, 3170, 3155,
@@ -107,41 +109,41 @@ uint16_t r_saw[256] = {3847, 3833, 3819, 3805, 3791, 3776, 3762, 3748, 3734, 372
                        1109, 1095, 1081, 1067, 1052, 1038, 1024, 1010, 996, 982, 968, 954, 940, 925, 911, 897, 883, 869, 855, 841,
                        827, 813, 798, 784, 770, 756, 742, 728, 714, 700, 686, 671, 657, 643, 629, 615, 601, 587, 573, 559, 544, 530,
                        516, 502, 488, 474, 460, 446, 431, 417, 403, 389, 375, 361, 347, 333, 319, 304, 290, 276, 262, 248};
-
-void tim2_isr(void)
+/*                      */
+void tim2_isr(void) // обработчик прерывания таймера2 (ЦАП)
 {
-    dac_load_data_buffer_single(signal[p_acc >> 8], RIGHT12, CHANNEL_2);
+    dac_load_data_buffer_single(signal[p_acc >> 8], RIGHT12, CHANNEL_2); // загрузка буфера в цап
     p_acc += p_step;             // шаг
-    TIM_SR(TIM2) &= ~TIM_SR_UIF; /* Clear interrrupt flag. */
+    TIM_SR(TIM2) &= ~TIM_SR_UIF; // очистка флага прерывания
 }
 
-void tim3_isr(void) // обработка кнопок
+void tim3_isr(void) // обработчик прерывания таймера3 (обработка кнопок)
 {
     minus_freq();
     plus_freq();
-    minus_signal();
+    minus_signal(); // функции кнопок
     plus_signal();
     step_select();
-    TIM_SR(TIM3) &= ~TIM_SR_UIF; /* Clear interrrupt flag. */
+    TIM_SR(TIM3) &= ~TIM_SR_UIF; // очистка флага прерывания
 }
 
 int main(void)
 {
-    rcc_clock_setup_in_hse_8mhz_out_72mhz();
+    rcc_clock_setup_in_hse_8mhz_out_72mhz(); // установка тактирования
     gpio_setup();
     nvic_setup();
     dac_setup();
     timers_setup();
     i2c_setup();
-    ssd1306_init(I2C2, DEFAULT_7bit_OLED_SLAVE_ADDRESS, 128, 64);
+    ssd1306_init(I2C2, DEFAULT_7bit_OLED_SLAVE_ADDRESS, 128, 64); // инициализация дисплея
 
-    int f = 0;
-    wchar_t freq[8]; // Буфер для wchar_t строки
+    int f = 0; // переменная частоты
+    wchar_t freq[8]; // буфер для wchar_t строки
     while (1)
     {
-        f = (p_step / 48)*250;
+        f = p_step / 24 * 125;
         swprintf(freq, sizeof(freq) / sizeof(wchar_t), L"%d", f); // Использование swprintf для преобразования int в wchar_t*
-
+        /*  вывод информации на дисплей  */
         ssd1306_clear();
         ssd1306_drawWCharStr(0, 0, white, nowrap, L"Форма сигнала:");
         if (num_sig == 1)
@@ -170,13 +172,17 @@ int main(void)
         ssd1306_drawWCharStr(0, 32, white, nowrap, L"Шаг(Гц)");
         if (num_step == 1)
         {
-            ssd1306_drawWCharStr(64, 32, white, nowrap, L"250");
+            ssd1306_drawWCharStr(64, 32, white, nowrap, L"125");
         }
         if (num_step == 2)
         {
-            ssd1306_drawWCharStr(64, 32, white, nowrap, L"500");
+            ssd1306_drawWCharStr(64, 32, white, nowrap, L"250");
         }
         if (num_step == 3)
+        {
+            ssd1306_drawWCharStr(64, 32, white, nowrap, L"500");
+        }
+        if (num_step == 4)
         {
             ssd1306_drawWCharStr(64, 32, white, nowrap, L"1000");
         }
@@ -188,18 +194,18 @@ int main(void)
 
 static void gpio_setup(void)
 {
-    rcc_periph_clock_enable(RCC_GPIOD);
+    //rcc_periph_clock_enable(RCC_GPIOD); // тактирование портов
     rcc_periph_clock_enable(RCC_GPIOB);
-    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO9 | GPIO5 | GPIO6 | GPIO7 | GPIO8);
-    gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
+    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO9 | GPIO5 | GPIO6 | GPIO7 | GPIO8); // входы для кнопок, подтянуты к питанию
+    //gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
 }
 
 static void dac_setup(void)
 {
     rcc_periph_clock_enable(RCC_GPIOA);
     gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO5);
-    rcc_periph_clock_enable(RCC_DAC);
-    dac_enable(CHANNEL_2);
+    rcc_periph_clock_enable(RCC_DAC); // тактирование цапа и настройка вывода
+    dac_enable(CHANNEL_2); // включить цап
 }
 
 static void i2c_setup(void)
@@ -253,30 +259,30 @@ static void timers_setup(void)
     rcc_periph_clock_enable(RCC_TIM2);
     rcc_periph_clock_enable(RCC_TIM3);
 
-    /* Set timer start value. */
+    /* Стартовое значение таймера */
     // TIM_CNT(TIM2) = 1;
     TIM_CNT(TIM3) = 1;
 
-    /* Set timer prescaler. 36MHz/36000 => 1000 counts per second. */
+    /* Предделитель 36MHz/36000 => 1000 отсчетов в секунду */
     TIM_PSC(TIM2) = 18;
     TIM_PSC(TIM3) = 36000;
 
-    /* End timer value. If this is reached an interrupt is generated. */
+    /* Период таймера */
     TIM_ARR(TIM2) = 10;
     TIM_ARR(TIM3) = 250;
 
-    /* Update interrupt enable. */
+    /* Включить прерывания */
     TIM_DIER(TIM2) |= TIM_DIER_UIE;
     TIM_DIER(TIM3) |= TIM_DIER_UIE;
 
-    /* Start timer. */
+    /* Запустить таймер */
     TIM_CR1(TIM2) |= TIM_CR1_CEN;
     TIM_CR1(TIM3) |= TIM_CR1_CEN;
 }
 
 static void nvic_setup(void)
 {
-    /* Without this the timer interrupt routine will never be called. */
+    /* Активировать прерывания и установить приоритеты */
     nvic_enable_irq(NVIC_TIM2_IRQ);
     nvic_set_priority(NVIC_TIM2_IRQ, 2);
 
@@ -293,7 +299,7 @@ void minus_freq(void)
     {
         p_step -= step;
     }
-    if (p_step < 0)
+    if (p_step < 0) 
     {
         p_step = 0;
     }
@@ -308,6 +314,10 @@ void plus_freq(void)
     if (cur_val == 1 && prev_val == 0)
     {
         p_step += step;
+    }
+    if (p_step > 19200)
+    {
+        p_step = 19200;
     }
     prev_val = cur_val;
 }
@@ -429,19 +439,23 @@ void step_select(void)
         num_step += 1;
         if (num_step == 1)
         {
-            step = 48; // 250 Гц
+            step = 24; // 125 Гц
         }
         if (num_step == 2)
         {
-            step = 96; // 500 Гц
+            step = 48; // 250 Гц
         }
         if (num_step == 3)
         {
-            step = 192; // 1000 Гц
-        }  
+            step = 96; // 500 Гц
+        }
         if (num_step == 4)
         {
-            step = 48; // 250 Гц
+            step = 192; // 1000 Гц
+        }  
+        if (num_step == 5)
+        {
+            step = 24; // 125 Гц
             num_step = 1; 
         }  
     }
