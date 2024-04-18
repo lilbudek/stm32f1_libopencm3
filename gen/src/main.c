@@ -299,7 +299,7 @@ void minus_freq(void)
     {
         p_step -= step;
     }
-    if (p_step < 0) 
+    if (p_step < 0) // ограничение 0
     {
         p_step = 0;
     }
@@ -315,9 +315,9 @@ void plus_freq(void)
     {
         p_step += step;
     }
-    if (p_step > 19200)
+    if (p_step > 9600) // ограничение 50 кГц
     {
-        p_step = 19200;
+        p_step = 9600;
     }
     prev_val = cur_val;
 }
