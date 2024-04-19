@@ -196,7 +196,7 @@ static void gpio_setup(void)
 {
     //rcc_periph_clock_enable(RCC_GPIOD); // тактирование портов
     rcc_periph_clock_enable(RCC_GPIOB);
-    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO9 | GPIO5 | GPIO6 | GPIO7 | GPIO8); // входы для кнопок, подтянуты к питанию
+    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO9 | GPIO5 | GPIO6 | GPIO7 | GPIO8); // входы для кнопок, подтянуты к земле
     //gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
 }
 
