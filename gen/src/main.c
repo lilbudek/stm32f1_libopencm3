@@ -9,24 +9,23 @@
 #include <libopencm3/stm32/i2c.h>
 #include <ssd1306_i2c.h>
 
-static void gpio_setup(void); // установить входы/выходы
-static void dac_setup(void); // настройка цап
-static void i2c_setup(void); // настройка и2ц
+static void gpio_setup(void);   // установить входы/выходы
+static void dac_setup(void);    // настройка цап
+static void i2c_setup(void);    // настройка и2ц
 static void timers_setup(void); // настройка таймеров
-static void nvic_setup(void); // настройка прерываний
-void minus_freq(void); //
-void plus_freq(void); //
-void minus_signal(void); // функции для кнопок
-void plus_signal(void); //
-void step_select(void); //
+static void nvic_setup(void);   // настройка прерываний
+void minus_freq(void);          //
+void plus_freq(void);           //
+void minus_signal(void);        // функции для кнопок
+void plus_signal(void);         //
+void step_select(void);         //
 
-
-uint16_t p_acc = 0;     // аккумулятор фазы
-int p_step = 0; // код частоты 192 - 1khz
-uint16_t step = 0; // размер шага
+uint16_t p_acc = 0;         // аккумулятор фазы
+int p_step = 0;             // код частоты 192 - 1khz
+uint16_t step = 0;          // размер шага
 uint16_t signal[256] = {0}; // буфер для цапа
-int8_t num_sig = 0; // номер сигнала
-int8_t num_step = 0; // номер шага
+int8_t num_sig = 0;         // номер сигнала
+int8_t num_step = 0;        // номер шага
 
 /*  отсчеты сигналов    */
 uint16_t sinus[256] = {2048, 2092, 2136, 2180, 2224, 2268, 2312, 2355, 2399, 2442,
@@ -113,8 +112,8 @@ uint16_t r_saw[256] = {3847, 3833, 3819, 3805, 3791, 3776, 3762, 3748, 3734, 372
 void tim2_isr(void) // обработчик прерывания таймера2 (ЦАП)
 {
     dac_load_data_buffer_single(signal[p_acc >> 8], RIGHT12, CHANNEL_2); // загрузка буфера в цап
-    p_acc += p_step;             // шаг
-    TIM_SR(TIM2) &= ~TIM_SR_UIF; // очистка флага прерывания
+    p_acc += p_step;                                                     // шаг
+    TIM_SR(TIM2) &= ~TIM_SR_UIF;                                         // очистка флага прерывания
 }
 
 void tim3_isr(void) // обработчик прерывания таймера3 (обработка кнопок)
@@ -137,7 +136,7 @@ int main(void)
     i2c_setup();
     ssd1306_init(I2C2, DEFAULT_7bit_OLED_SLAVE_ADDRESS, 128, 64); // инициализация дисплея
 
-    int f = 0; // переменная частоты
+    int f = 0;       // переменная частоты
     wchar_t freq[8]; // буфер для wchar_t строки
     while (1)
     {
@@ -146,45 +145,41 @@ int main(void)
         /*  вывод информации на дисплей  */
         ssd1306_clear();
         ssd1306_drawWCharStr(0, 0, white, nowrap, L"Форма сигнала:");
-        if (num_sig == 1)
+        switch (num_sig)
         {
+        case 1:
             ssd1306_drawWCharStr(0, 8, white, nowrap, L"Синус");
-        }
-        if (num_sig == 2)
-        {
+            break;
+        case 2:
             ssd1306_drawWCharStr(0, 8, white, nowrap, L"Меандр");
-        }
-        if (num_sig == 3)
-        {
+            break;
+        case 3:
             ssd1306_drawWCharStr(0, 8, white, nowrap, L"Треугольник");
-        }
-        if (num_sig == 4)
-        {
+            break;
+        case 4:
             ssd1306_drawWCharStr(0, 8, white, nowrap, L"Пила Левая");
-        }
-        if (num_sig == 5)
-        {
+            break;
+        case 5:
             ssd1306_drawWCharStr(0, 8, white, nowrap, L"Пила Правая");
+            break;
         }
         ssd1306_drawWCharStr(0, 16, white, nowrap, L"Частота(Гц)");
         ssd1306_drawWCharStr(64, 16, white, nowrap, freq);
-        //ssd1306_drawWCharStr(64, 16, white, nowrap, L"Гц");
         ssd1306_drawWCharStr(0, 32, white, nowrap, L"Шаг(Гц)");
-        if (num_step == 1)
+        switch (num_step)
         {
+        case 1:
             ssd1306_drawWCharStr(64, 32, white, nowrap, L"125");
-        }
-        if (num_step == 2)
-        {
+            break;
+        case 2:
             ssd1306_drawWCharStr(64, 32, white, nowrap, L"250");
-        }
-        if (num_step == 3)
-        {
+            break;
+        case 3:
             ssd1306_drawWCharStr(64, 32, white, nowrap, L"500");
-        }
-        if (num_step == 4)
-        {
+            break;
+        case 4:
             ssd1306_drawWCharStr(64, 32, white, nowrap, L"1000");
+            break;
         }
         ssd1306_refresh();
     }
@@ -194,10 +189,10 @@ int main(void)
 
 static void gpio_setup(void)
 {
-    //rcc_periph_clock_enable(RCC_GPIOD); // тактирование портов
+    // rcc_periph_clock_enable(RCC_GPIOD); // тактирование портов
     rcc_periph_clock_enable(RCC_GPIOB);
     gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO9 | GPIO5 | GPIO6 | GPIO7 | GPIO8); // входы для кнопок, подтянуты к земле
-    //gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
+    // gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
 }
 
 static void dac_setup(void)
@@ -205,7 +200,7 @@ static void dac_setup(void)
     rcc_periph_clock_enable(RCC_GPIOA);
     gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO5);
     rcc_periph_clock_enable(RCC_DAC); // тактирование цапа и настройка вывода
-    dac_enable(CHANNEL_2); // включить цап
+    dac_enable(CHANNEL_2);            // включить цап
 }
 
 static void i2c_setup(void)
@@ -260,7 +255,7 @@ static void timers_setup(void)
     rcc_periph_clock_enable(RCC_TIM3);
 
     /* Стартовое значение таймера */
-    // TIM_CNT(TIM2) = 1;
+    TIM_CNT(TIM2) = 1;
     TIM_CNT(TIM3) = 1;
 
     /* Предделитель 36MHz/36000 => 1000 отсчетов в секунду */
@@ -332,43 +327,29 @@ void minus_signal(void)
         dac_disable(CHANNEL_2);
         num_sig -= 1;
         if (num_sig < 1)
-        {
             num_sig = 1;
-        }
-        if (num_sig == 1)
+        switch (num_sig)
         {
+        case 1:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = sinus[i];
-            }
-        }
-        if (num_sig == 2)
-        {
+            break;
+        case 2:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = square[i];
-            }
-        }
-        if (num_sig == 3)
-        {
+            break;
+        case 3:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = triangle[i];
-            }
-        }
-        if (num_sig == 4)
-        {
+            break;
+        case 4:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = l_saw[i];
-            }
-        }
-        if (num_sig == 5)
-        {
+            break;
+        case 5:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = r_saw[i];
-            }
+            break;
         }
         dac_enable(CHANNEL_2);
     }
@@ -384,50 +365,35 @@ void plus_signal(void)
     {
         dac_disable(CHANNEL_2);
         num_sig += 1;
-        if (num_sig == 1)
+        switch (num_sig)
         {
+        case 1:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = sinus[i];
-            }
-        }
-        if (num_sig == 2)
-        {
+            break;
+        case 2:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = square[i];
-            }
-        }
-        if (num_sig == 3)
-        {
+            break;
+        case 3:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = triangle[i];
-            }
-        }
-        if (num_sig == 4)
-        {
+            break;
+        case 4:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = l_saw[i];
-            }
-        }
-        if (num_sig == 5)
-        {
+            break;
+        case 5:
             for (int i = 0; i < 256; i++)
-            {
                 signal[i] = r_saw[i];
-            }
+            break;
         }
         if (num_sig > 5)
-        {
             num_sig = 5;
-        }
         dac_enable(CHANNEL_2);
     }
     prev_val = cur_val;
 }
-
 
 void step_select(void)
 {
@@ -437,27 +403,24 @@ void step_select(void)
     if (cur_val == 1 && prev_val == 0)
     {
         num_step += 1;
-        if (num_step == 1)
+        switch (num_step)
         {
+        case 1:
             step = 24; // 125 Гц
-        }
-        if (num_step == 2)
-        {
+            break;
+        case 2:
             step = 48; // 250 Гц
-        }
-        if (num_step == 3)
-        {
+            break;
+        case 3:
             step = 96; // 500 Гц
-        }
-        if (num_step == 4)
-        {
+            break;
+        case 4:
             step = 192; // 1000 Гц
-        }  
-        if (num_step == 5)
-        {
+            break;
+        case 5:
             step = 24; // 125 Гц
-            num_step = 1; 
-        }  
+            num_step = 1;
+            break;
+        }
     }
-
 }
