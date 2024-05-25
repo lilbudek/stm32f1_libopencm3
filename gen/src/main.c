@@ -203,51 +203,47 @@ static void dac_setup(void)
     dac_enable(CHANNEL_2);            // включить цап
 }
 
-static void i2c_setup(void)
-{
+static void i2c_setup(void){
+    // Включение тактирования периферийного оборудования для I2C2
     rcc_periph_clock_enable(RCC_I2C2);
-    /* Set alternate functions for the SCL and SDA pins of I2C2. */
+    
+    /*
+     * Настройка альтернативных функций для пинов SCL и SDA интерфейса I2C2.
+     * Это необходимо для подключения I2C устройств к микроконтроллеру через эти
+ пины.
+     */
     gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
                   GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN,
                   GPIO_I2C2_SCL | GPIO_I2C2_SDA);
-
-    /* Disable the I2C before changing any configuration. */
+    
+    // Отключение I2C перед изменением конфигурации
     i2c_peripheral_disable(I2C2);
-
-    /* APB1 is running at 36MHz. */
-    i2c_set_clock_frequency(I2C2, I2C_CR2_FREQ_36MHZ);
-
-    /* 400KHz - I2C Fast Mode */
-    i2c_set_fast_mode(I2C2);
-
-    /*
-     * fclock for I2C is 36MHz APB2 -> cycle time 28ns, low time at 400kHz
-     * incl trise -> Thigh = 1600ns; CCR = tlow/tcycle = 0x1C,9;
-     * Datasheet suggests 0x1e.
-     */
-    i2c_set_ccr(I2C2, 0x1e);
-
-    /*
-     * fclock for I2C is 36MHz -> cycle time 28ns, rise time for
-     * 400kHz => 300ns and 100kHz => 1000ns; 300ns/28ns = 10;
-     * Incremented by 1 -> 11.
-     */
-    i2c_set_trise(I2C2, 0x0b);
-
-    /*
-     * Enable ACK on I2C
-     */
+    
+    // Сброс состояния периферийного устройства I2C2
+    i2c_reset(I2C2);
+    
+    // Установка стандартного режима работы I2C 
+    i2c_set_standard_mode(I2C2);
+    
+    // Установка частоты тактового сигнала I2C на 16 МГц
+    i2c_set_clock_frequency(I2C2, I2C_CR2_FREQ_16MHZ);
+    
+    // Настройка параметров управления текущим циклом (CCR) для I2C2
+    i2c_set_ccr(I2C2, 0xAA);
+    
+    // Установка коэффициента дутисцикла (Duty Cycle) для I2C2
+    i2c_set_dutycycle(I2C2, I2C_CCR_DUTY_DIV2);
+    
+    // Установка времени подъема сигнала SDA после завершения операции чтения/записи
+    i2c_set_trise(I2C2, 0x11);
+    
+    // Включение подтверждения при получении данных от устройства
     i2c_enable_ack(I2C2);
-
-    /*
-     * This is our slave address - needed only if we want to receive from
-     * other masters.
-     */
-    i2c_set_own_7bit_slave_address(I2C2, 0x32);
-
-    /* If everything is configured -> enable the peripheral. */
+    
+    // Включение периферийного устройства I2C2
     i2c_peripheral_enable(I2C2);
 }
+
 
 static void timers_setup(void)
 {
