@@ -225,17 +225,14 @@ static void i2c_setup(void){
     // Установка стандартного режима работы I2C 
     i2c_set_standard_mode(I2C2);
     
-    // Установка частоты тактового сигнала I2C на 16 МГц
-    i2c_set_clock_frequency(I2C2, I2C_CR2_FREQ_16MHZ);
+    // Установка частоты периферии
+    i2c_set_clock_frequency(I2C2, I2C_CR2_FREQ_36MHZ);
     
-    // Настройка параметров управления текущим циклом (CCR) для I2C2
-    i2c_set_ccr(I2C2, 0xAA);
+    // Настройка тактовой частоты шины (значение из даташита таблица 52 scl freq) 
+    i2c_set_ccr(I2C2, 0xB4);
     
-    // Установка коэффициента дутисцикла (Duty Cycle) для I2C2
-    i2c_set_dutycycle(I2C2, I2C_CCR_DUTY_DIV2);
-    
-    // Установка времени подъема сигнала SDA после завершения операции чтения/записи
-    i2c_set_trise(I2C2, 0x11);
+    // Установка времени подъема сигналов 1/36mghz = 28 ns, 1000ns/28ns + 1 = 37 (1000 trise из таблицы 51 i2c characteristics)
+    i2c_set_trise(I2C2, 0x25);
     
     // Включение подтверждения при получении данных от устройства
     i2c_enable_ack(I2C2);
