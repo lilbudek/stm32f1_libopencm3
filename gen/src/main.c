@@ -140,7 +140,7 @@ int main(void)
     wchar_t freq[8]; // буфер для wchar_t строки
     while (1)
     {
-        f = p_step / 24 * 125;
+        f = p_step / 20 * 125;
         swprintf(freq, sizeof(freq) / sizeof(wchar_t), L"%d", f); // Использование swprintf для преобразования int в wchar_t*
         /*  вывод информации на дисплей  */
         ssd1306_clear();
@@ -248,16 +248,16 @@ static void timers_setup(void)
     rcc_periph_clock_enable(RCC_TIM3);
 
     /* Стартовое значение таймера */
-    TIM_CNT(TIM2) = 1;
-    TIM_CNT(TIM3) = 1;
+    TIM_CNT(TIM2) = 0;
+    TIM_CNT(TIM3) = 0;
 
-    /* Предделитель 36MHz/36000 => 1000 отсчетов в секунду */
-    TIM_PSC(TIM2) = 18;
-    TIM_PSC(TIM3) = 36000;
+    /* Предделитель 36MHz/36000 => 1000 отсчетов в секунду (счет начинается с 0, поэтому в предделителе и периоде нужно отнимать единичку) */
+    TIM_PSC(TIM2) = 17;
+    TIM_PSC(TIM3) = 35999;
 
     /* Период таймера */
-    TIM_ARR(TIM2) = 10;
-    TIM_ARR(TIM3) = 250;
+    TIM_ARR(TIM2) = 9;
+    TIM_ARR(TIM3) = 249;
 
     /* Включить прерывания */
     TIM_DIER(TIM2) |= TIM_DIER_UIE;
@@ -303,9 +303,9 @@ void plus_freq(void)
     {
         p_step += step;
     }
-    if (p_step > 9600) // ограничение 50 кГц
+    if (p_step > 8000) // ограничение 50 кГц
     {
-        p_step = 9600;
+        p_step = 8000;
     }
     prev_val = cur_val;
 }
@@ -399,19 +399,19 @@ void step_select(void)
         switch (num_step)
         {
         case 1:
-            step = 24; // 125 Гц
+            step = 20; // 125 Гц
             break;
         case 2:
-            step = 48; // 250 Гц
+            step = 40; // 250 Гц
             break;
         case 3:
-            step = 96; // 500 Гц
+            step = 80; // 500 Гц
             break;
         case 4:
-            step = 192; // 1000 Гц
+            step = 160; // 1000 Гц
             break;
         case 5:
-            step = 24; // 125 Гц
+            step = 20; // 125 Гц
             num_step = 1;
             break;
         }
